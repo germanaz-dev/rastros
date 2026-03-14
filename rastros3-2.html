@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RASTROS — Investigador Privado</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=IM+Fell+English:ital@0;1&display=swap');
+
+:root {
+  --amber:#ffb000; --amber-dim:#996800; --amber-faint:rgba(255,176,0,0.06);
+  --paper:#f2e0bb; --paper-dark:#c8b48a; --ink:#1a0e00;
+  --bg:#070400; --bg2:#0d0700; --bg3:#130a00;
+  --red:#cc3300; --red-dim:#7a1e00; --green:#4a8800; --green-b:#66bb00; --cyan:#00aacc;
+  --gold:#ffd700; --sepia:#8b6914;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--amber);font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden;font-size:14px;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.08) 3px,rgba(0,0,0,0.08) 4px);pointer-events:none;z-index:9000;}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 35%,transparent 50%,rgba(0,0,0,0.65) 100%);pointer-events:none;z-index:8999;}
+#app{max-width:900px;margin:0 auto;padding:16px 16px 50px;}
+.screen{display:none;} .screen.active{display:block;}
+
+/* HDR */
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--amber-dim);padding-bottom:10px;margin-bottom:18px;flex-wrap:wrap;gap:8px;}
+.logo{font-family:'Special Elite',cursive;font-size:clamp(1.4rem,4vw,2rem);letter-spacing:5px;text-shadow:0 0 20px var(--amber),0 0 40px rgba(255,176,0,0.2);line-height:1;}
+.logo-sub{font-size:clamp(0.5rem,1.5vw,0.6rem);color:var(--amber-dim);letter-spacing:2px;margin-top:4px;text-transform:uppercase;}
+.hud{text-align:right;font-size:clamp(0.6rem,1.8vw,0.72rem);color:var(--amber-dim);line-height:2;}
+.hud .val{color:var(--amber);font-family:'Special Elite',cursive;font-size:1.05em;}
+.hud .val.danger{color:var(--red);animation:blink .9s step-end infinite;}
+.hud .pts{color:var(--gold);}
+
+/* ANIMATIONS */
+@keyframes blink{50%{opacity:0;}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(255,176,0,0);}50%{box-shadow:0 0 14px rgba(255,176,0,0.25);}}
+@keyframes dash{to{stroke-dashoffset:0;}}
+@keyframes cashRain{0%{transform:translateY(-20px);opacity:0;}20%{opacity:1;}80%{opacity:1;}100%{transform:translateY(60px);opacity:0;}}
+@keyframes stampIn{0%{transform:rotate(-12deg) scale(2);opacity:0;}60%{transform:rotate(3deg) scale(0.95);}100%{transform:rotate(-8deg) scale(1);opacity:1;}}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+@keyframes glow{0%,100%{text-shadow:0 0 10px var(--gold);}50%{text-shadow:0 0 30px var(--gold),0 0 60px rgba(255,215,0,0.4);}}
+@keyframes mapLine{from{stroke-dashoffset:var(--len);}to{stroke-dashoffset:0;}}
+@keyframes planeFly{0%{opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{opacity:0;}}
+
+/* BUTTONS */
+.btn-main{background:none;border:1px solid var(--amber);color:var(--amber);font-family:'Share Tech Mono',monospace;font-size:0.82rem;padding:12px 24px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all .2s;width:100%;margin-top:10px;border-radius:0;-webkit-appearance:none;}
+.btn-main:hover:not(:disabled){background:var(--amber-faint);box-shadow:0 0 16px rgba(255,176,0,0.1);}
+.btn-main:disabled{opacity:.35;cursor:not-allowed;}
+.btn-small{background:none;border:1px solid var(--amber-dim);color:var(--amber-dim);font-family:'Share Tech Mono',monospace;font-size:0.68rem;padding:7px 14px;cursor:pointer;letter-spacing:1px;transition:all .15s;border-radius:0;-webkit-appearance:none;}
+.btn-small:hover{border-color:var(--amber);color:var(--amber);}
+
+/* INPUTS */
+.inp{width:100%;background:var(--bg);border:1px solid var(--amber-dim);color:var(--amber);font-family:'Share Tech Mono',monospace;font-size:0.8rem;padding:10px 12px;outline:none;transition:border-color .2s;border-radius:0;-webkit-appearance:none;}
+.inp:focus{border-color:var(--amber);}
+.inp::placeholder{color:#3a2200;}
+
+/* PANELS */
+.panel{background:var(--bg2);border:1px solid var(--amber-dim);padding:13px;position:relative;margin-bottom:12px;animation:fadeIn .3s ease;}
+.panel::before{content:attr(data-lbl);position:absolute;top:-9px;left:11px;background:var(--bg);padding:0 5px;font-size:0.55rem;color:var(--amber-dim);letter-spacing:2px;text-transform:uppercase;}
+.panel-text{font-size:0.8rem;line-height:1.9;color:#cc8800;}
+.panel-text .hi{color:var(--amber);}
+.panel-text .cl{color:#ffdd55;border-bottom:1px dashed #ffdd55;}
+.panel-text .neg{color:var(--red);}
+.panel-text .pos{color:var(--green-b);}
+.panel-text .org{color:var(--red);font-style:italic;}
+
+/* SETUP */
+.setup-wrap{max-width:560px;margin:40px auto;padding:0 8px;}
+.setup-title{font-family:'Special Elite',cursive;font-size:clamp(2rem,7vw,3rem);letter-spacing:6px;text-align:center;text-shadow:0 0 30px var(--amber);margin-bottom:6px;}
+.setup-sub{text-align:center;font-size:0.65rem;color:var(--amber-dim);letter-spacing:3px;margin-bottom:28px;}
+.setup-card{background:var(--bg2);border:1px solid var(--amber-dim);padding:20px;margin-bottom:14px;position:relative;}
+.setup-card::before{content:attr(data-lbl);position:absolute;top:-9px;left:12px;background:var(--bg);padding:0 6px;font-size:0.58rem;color:var(--amber-dim);letter-spacing:2px;text-transform:uppercase;}
+.setup-text{font-size:0.77rem;color:#996600;line-height:1.9;margin-bottom:14px;}
+.setup-text a{color:var(--amber);text-decoration:none;border-bottom:1px dashed var(--amber-dim);}
+
+/* OFFICE */
+.office-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+@media(max-width:480px){.office-grid{grid-template-columns:1fr;}}
+.office-obj{background:var(--bg2);border:1px solid var(--amber-dim);padding:14px;cursor:pointer;transition:all .2s;position:relative;animation:fadeIn .3s ease;}
+.office-obj:hover,.office-obj:active{background:var(--amber-faint);border-color:var(--amber);}
+.obj-icon{font-size:1.6rem;display:block;margin-bottom:8px;}
+.obj-name{font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--amber-dim);margin-bottom:5px;}
+.obj-desc{font-size:0.72rem;color:#774400;line-height:1.5;}
+.badge{position:absolute;top:8px;right:8px;background:var(--red);color:white;font-size:0.5rem;padding:2px 5px;letter-spacing:1px;}
+.shelf{background:var(--bg2);border:1px solid #1e1000;padding:12px 14px;margin-top:4px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;}
+.shelf-label{font-size:0.55rem;color:#2a1500;letter-spacing:2px;text-transform:uppercase;width:100%;margin-bottom:4px;}
+.shelf-books{font-size:0.62rem;color:#2a1600;font-family:'Share Tech Mono',monospace;border-left:2px solid #2a1500;padding-left:8px;line-height:1.7;flex:1;}
+.carmen-book{background:linear-gradient(135deg,#cc1100,#880a00);width:20px;height:52px;border-right:3px solid #550500;display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 4px rgba(0,0,0,0.6);cursor:pointer;flex-shrink:0;}
+.carmen-book span{writing-mode:vertical-rl;font-size:0.35rem;color:rgba(255,190,170,0.65);font-family:'Special Elite',cursive;letter-spacing:1px;transform:rotate(180deg);}
+.stats-bar{background:var(--bg2);border:1px solid #1e1000;padding:10px 14px;margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+.stat-item{font-size:0.65rem;color:var(--amber-dim);}
+.stat-item .sv{color:var(--amber);font-family:'Special Elite',cursive;font-size:0.9rem;}
+.stat-item .sv.gold{color:var(--gold);}
+#carmen-msg{display:none;background:var(--bg2);border:1px dashed var(--amber-dim);padding:10px;font-size:0.7rem;color:var(--amber-dim);font-style:italic;margin-top:8px;animation:fadeIn .3s ease;}
+
+/* RANK */
+.rank-display{background:var(--bg2);border:1px solid var(--amber-dim);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.rank-icon{font-size:1.4rem;}
+.rank-name{font-family:'Special Elite',cursive;font-size:1rem;color:var(--amber);}
+.rank-desc{font-size:0.65rem;color:var(--amber-dim);margin-top:2px;}
+.xp-track{background:#1a1000;height:4px;margin-top:6px;flex:1;min-width:100px;}
+.xp-fill{height:100%;background:var(--amber);transition:width .5s;}
+.xp-label{font-size:0.55rem;color:var(--amber-dim);margin-top:3px;}
+
+/* CASE LIST */
+.section-hdr{font-size:0.58rem;letter-spacing:3px;color:var(--amber-dim);text-transform:uppercase;border-bottom:1px solid #1e1000;padding-bottom:8px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.case-item{background:var(--bg2);border:1px solid #2a1500;border-left:3px solid var(--amber-dim);padding:14px;margin-bottom:10px;cursor:pointer;transition:all .2s;animation:fadeIn .3s ease;}
+.case-item:hover,.case-item:active{border-left-color:var(--amber);background:var(--amber-faint);}
+.case-item.malos{border-left-color:var(--red-dim);}
+.case-item.malos:hover{border-left-color:var(--red);}
+.case-item.generating{opacity:.6;pointer-events:none;animation:pulse 1.5s infinite;}
+.case-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+.case-title{font-family:'Special Elite',cursive;font-size:clamp(0.9rem,3vw,1rem);color:var(--amber);margin-bottom:4px;}
+.case-sub{font-size:0.7rem;color:#885500;line-height:1.5;margin-bottom:8px;}
+.case-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.tag{font-size:0.5rem;letter-spacing:1px;padding:2px 5px;border:1px solid;text-transform:uppercase;}
+.tag.org{border-color:var(--red);color:var(--red);}
+.tag.loc{border-color:var(--amber-dim);color:var(--amber-dim);}
+.tag.diff-easy{border-color:#4a8800;color:#66bb00;}
+.tag.diff-med{border-color:#cc7700;color:#ffaa00;}
+.tag.diff-hard{border-color:var(--red);color:#ff6644;}
+.case-reward{text-align:right;flex-shrink:0;}
+.reward-amt{font-family:'Special Elite',cursive;font-size:1rem;color:var(--green-b);}
+.reward-pts{font-family:'Special Elite',cursive;font-size:0.85rem;color:var(--gold);}
+.reward-lbl{font-size:0.55rem;color:#337700;letter-spacing:1px;}
+
+/* INVESTIGATION */
+.inv-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;}
+@media(max-width:640px){.inv-layout{grid-template-columns:1fr;}.side-col{display:none;}.side-col.show{display:block;}}
+.polaroid{background:var(--paper);padding:11px 11px 34px;box-shadow:3px 3px 0 rgba(0,0,0,0.8);transform:rotate(-0.6deg);margin-bottom:14px;animation:fadeIn .4s ease;}
+.pol-img{background:#0a0600;height:130px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #150d00;}
+.city-ascii{font-family:'Share Tech Mono',monospace;font-size:clamp(0.5rem,1.4vw,0.62rem);color:var(--amber-dim);line-height:1.3;text-align:center;padding:6px;white-space:pre;opacity:.85;}
+.pol-bottom{display:flex;justify-content:space-between;align-items:flex-end;padding-top:7px;}
+.pol-city{font-family:'Special Elite',cursive;color:var(--ink);font-size:0.95rem;}
+.pol-date{font-size:0.58rem;color:#8a6040;font-family:'Share Tech Mono',monospace;}
+.progress-bar{display:flex;gap:5px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+.p-dot{width:8px;height:8px;border:1px solid var(--amber-dim);flex-shrink:0;}
+.p-dot.done{background:var(--amber);border-color:var(--amber);}
+.p-dot.now{border-color:var(--amber);animation:blink 1s step-end infinite;}
+.p-label{font-size:0.58rem;color:var(--amber-dim);letter-spacing:2px;margin-left:4px;}
+.mob-tabs{display:none;gap:0;margin-bottom:12px;}
+@media(max-width:640px){.mob-tabs{display:flex;}}
+.mob-tab{flex:1;background:none;border:1px solid var(--amber-dim);color:var(--amber-dim);font-family:'Share Tech Mono',monospace;font-size:0.65rem;padding:8px 4px;cursor:pointer;letter-spacing:1px;text-align:center;border-radius:0;}
+.mob-tab.active{background:var(--amber-faint);border-color:var(--amber);color:var(--amber);}
+.action-btn{display:block;width:100%;background:none;border:1px solid var(--amber-dim);color:var(--amber);font-family:'Share Tech Mono',monospace;font-size:clamp(0.68rem,2vw,0.78rem);padding:10px 12px;text-align:left;cursor:pointer;margin-bottom:6px;transition:all .15s;border-radius:0;-webkit-appearance:none;}
+.action-btn:hover:not(:disabled),.action-btn:active:not(:disabled){background:var(--amber-faint);border-color:var(--amber);}
+.action-btn:disabled{opacity:.3;cursor:not-allowed;border-style:dashed;}
+.action-btn .cost{float:right;color:var(--red);font-size:.85em;}
+.action-btn .locked{float:right;color:#3a2200;font-size:.8em;}
+.action-btn.highlight{border-color:var(--amber);animation:pulse 2s infinite;}
+.action-btn.arrest-btn{border-color:var(--red);color:var(--red);}
+.action-btn.arrest-btn:hover:not(:disabled){background:rgba(204,51,0,0.08);}
+.action-btn.direct-btn{border-color:var(--gold);color:var(--gold);}
+.action-btn.direct-btn:hover:not(:disabled){background:rgba(255,215,0,0.06);}
+.action-btn.travel-btn{border-color:var(--cyan);color:var(--cyan);}
+.clue-entry{border-bottom:1px solid #1a1000;padding:7px 0;color:#cc8800;line-height:1.5;font-size:0.72rem;animation:fadeIn .3s ease;}
+.clue-entry:last-child{border-bottom:none;}
+.clue-type{font-size:0.55rem;color:var(--amber-dim);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:1px;}
+.no-clues{color:#2a1800;font-size:0.7rem;text-align:center;padding:12px 0;}
+.log-feed{max-height:110px;overflow-y:auto;}
+.log-entry{font-size:0.62rem;color:#664400;line-height:1.7;border-bottom:1px solid #110800;padding:2px 0;}
+.log-entry.imp{color:var(--amber);} .log-entry.bad{color:var(--red);} .log-entry.good{color:var(--green-b);}
+
+/* ── INDIANA JONES MAP ── */
+.map-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:6000;align-items:center;justify-content:center;padding:16px;}
+.map-overlay.open{display:flex;}
+.map-container{position:relative;width:100%;max-width:800px;}
+.map-title{font-family:'Special Elite',cursive;font-size:1.1rem;color:var(--sepia);text-align:center;margin-bottom:10px;letter-spacing:3px;text-shadow:0 0 10px rgba(139,105,20,0.5);}
+.map-svg-wrap{position:relative;background:linear-gradient(135deg,#2a1f0a 0%,#1a1308 40%,#221908 100%);border:3px solid #5a3e10;box-shadow:0 0 40px rgba(139,105,20,0.3),inset 0 0 60px rgba(0,0,0,0.5);overflow:hidden;}
+.map-svg-wrap::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23110d03'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='%231a1408' opacity='0.6'/%3E%3C/svg%3E");opacity:0.4;pointer-events:none;}
+.map-caption{font-size:0.65rem;color:var(--sepia);text-align:center;margin-top:8px;letter-spacing:2px;opacity:.7;}
+.map-close-btn{display:block;margin:12px auto 0;background:none;border:1px solid var(--sepia);color:var(--sepia);font-family:'Share Tech Mono',monospace;font-size:0.7rem;padding:8px 20px;cursor:pointer;letter-spacing:2px;border-radius:0;}
+.map-close-btn:hover{border-color:var(--amber);color:var(--amber);}
+
+/* ARREST */
+.arrest-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+@media(max-width:480px){.arrest-grid{grid-template-columns:1fr;}}
+.mugshot{background:var(--bg2);border:1px solid #2a1500;padding:14px;text-align:center;cursor:pointer;transition:all .2s;}
+.mugshot:hover,.mugshot:active{border-color:var(--amber-dim);}
+.mugshot.selected{border-color:var(--amber);box-shadow:0 0 12px rgba(255,176,0,0.12);}
+.mg-icon{font-size:1.8rem;display:block;margin-bottom:8px;}
+.mg-name{font-family:'Special Elite',cursive;font-size:0.9rem;color:var(--amber);margin-bottom:3px;}
+.mg-info{font-size:0.62rem;color:var(--amber-dim);line-height:1.5;}
+
+/* DIRECT ARREST MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:5500;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--amber);padding:20px;width:100%;max-width:460px;box-shadow:0 0 40px rgba(255,176,0,0.08);max-height:90vh;overflow-y:auto;}
+.modal-title{font-family:'Special Elite',cursive;font-size:1.1rem;margin-bottom:12px;border-bottom:1px solid var(--amber-dim);padding-bottom:8px;}
+.flight-opt{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid #2a1500;margin-bottom:7px;cursor:pointer;transition:all .15s;font-size:0.78rem;}
+.flight-opt:hover,.flight-opt:active{border-color:var(--amber);background:var(--amber-faint);}
+.flight-city{color:var(--amber);}
+.flight-price{color:var(--red);font-family:'Special Elite',cursive;}
+
+/* RESULT */
+.result-wrap{text-align:center;padding:clamp(20px,5vw,40px) 10px;}
+.result-title{font-family:'Special Elite',cursive;font-size:clamp(1.6rem,5vw,2.5rem);margin-bottom:14px;text-shadow:0 0 20px currentColor;}
+.result-title.win{color:var(--green-b);}
+.result-title.lose{color:var(--red);}
+.result-stats{display:inline-block;background:var(--bg2);border:1px solid var(--amber-dim);padding:14px 24px;text-align:left;font-size:0.75rem;line-height:2.2;margin-bottom:20px;}
+
+/* CASH ANIMATION */
+.cash-anim-wrap{position:fixed;inset:0;pointer-events:none;z-index:8000;overflow:hidden;}
+.cash-bill{position:absolute;font-size:1.4rem;animation:cashRain 1.8s ease forwards;}
+
+/* PAYMENT SCENE */
+.payment-scene{background:var(--paper);border:2px solid var(--paper-dark);padding:20px;max-width:400px;margin:0 auto 20px;transform:rotate(-0.5deg);box-shadow:4px 4px 0 rgba(0,0,0,0.7);position:relative;animation:fadeIn .5s ease;}
+.payment-scene .stamp{position:absolute;top:10px;right:10px;color:var(--green);border:3px solid var(--green);padding:3px 8px;font-size:0.8rem;letter-spacing:2px;transform:rotate(-8deg);font-family:'Special Elite',cursive;animation:stampIn .4s ease .3s both;}
+.payment-scene .pay-title{font-family:'Special Elite',cursive;color:var(--ink);font-size:1.1rem;margin-bottom:10px;}
+.payment-scene .pay-body{font-family:'IM Fell English',serif;font-size:0.8rem;color:#3a2000;line-height:1.8;}
+.payment-scene .pay-amount{font-family:'Special Elite',cursive;font-size:1.6rem;color:var(--ink);margin-top:10px;text-align:center;}
+.pts-burst{font-family:'Special Elite',cursive;font-size:2rem;color:var(--gold);animation:glow 1s ease infinite;margin:10px 0;}
+
+/* TECH */
+.tech-item{background:var(--bg2);border:1px solid #2a1500;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}
+.tech-item.owned{border-color:var(--green);opacity:.7;}
+.tech-name{font-family:'Special Elite',cursive;color:var(--amber);font-size:.95rem;margin-bottom:4px;}
+.tech-desc{font-size:0.68rem;color:var(--amber-dim);line-height:1.5;}
+.tech-price{font-family:'Special Elite',cursive;color:var(--green-b);font-size:1rem;text-align:right;white-space:nowrap;}
+.btn-buy{background:none;border:1px solid var(--green);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:0.65rem;padding:6px 12px;cursor:pointer;letter-spacing:1px;transition:all .15s;display:block;margin-top:8px;border-radius:0;}
+.btn-buy:hover:not(:disabled){background:rgba(74,136,0,0.1);}
+.btn-buy:disabled{opacity:.35;cursor:not-allowed;}
+
+/* DOSSIER */
+.dossier{background:var(--paper);border:2px solid var(--paper-dark);padding:18px;color:var(--ink);position:relative;transform:rotate(0.3deg);box-shadow:3px 3px 0 rgba(0,0,0,0.6);margin-bottom:14px;animation:fadeIn .3s ease;}
+.dossier-stamp{position:absolute;top:12px;right:12px;color:var(--red);border:2px solid var(--red);padding:2px 7px;font-size:0.65rem;letter-spacing:2px;transform:rotate(-8deg);opacity:.8;font-family:'Special Elite',cursive;}
+.dos-name{font-family:'Special Elite',cursive;font-size:1.3rem;color:var(--ink);margin-bottom:3px;}
+.dos-alias{font-family:'IM Fell English',serif;font-style:italic;font-size:.82rem;color:#5a3a00;margin-bottom:10px;}
+.dos-body{font-size:0.75rem;line-height:1.8;color:#3a2000;font-family:'IM Fell English',serif;}
+
+/* SAVE/LOAD */
+.save-code{background:var(--bg);border:1px solid var(--amber-dim);padding:10px;font-size:0.65rem;color:var(--amber-dim);word-break:break-all;margin:8px 0;font-family:'Share Tech Mono',monospace;max-height:80px;overflow-y:auto;}
+
+/* LOADING */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(7,4,0,0.92);z-index:7000;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.loading-overlay.show{display:flex;}
+.loading-text{font-size:0.8rem;color:var(--amber-dim);letter-spacing:2px;}
+.loading-dots::after{content:'...';animation:dots 1.5s steps(4,end) infinite;}
+@keyframes dots{0%{content:'';}25%{content:'.';}50%{content:'..';}75%{content:'...';}100%{content:'...';}}
+
+/* STATUS BAR */
+.statusbar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid #1a1000;padding:5px 16px;font-size:0.6rem;color:var(--amber-dim);z-index:100;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;}
+.cursor-blink::after{content:'█';animation:blink 1s step-end infinite;color:var(--amber);}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--amber-dim);}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ SETUP ══ -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-wrap">
+    <div class="setup-title">RASTROS</div>
+    <div class="setup-sub">AGENCIA PRIVADA DE INVESTIGACIÓN · EST. 1987</div>
+
+    <div class="setup-card" data-lbl="TU IDENTIDAD">
+      <input class="inp" type="text" id="inp-name" placeholder="Tu nombre de investigador..." maxlength="30" style="margin-bottom:10px;" />
+    </div>
+
+    <div class="setup-card" data-lbl="API KEY — GEMINI (GOOGLE)">
+      <div class="setup-text">
+        Key gratuita en <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a><br>
+        Se guarda solo en este dispositivo.
+      </div>
+      <input class="inp" type="password" id="inp-key" placeholder="AIzaSy..." autocomplete="off" />
+      <button class="btn-main" onclick="saveSetup()">[ INICIAR INVESTIGACIÓN ]</button>
+    </div>
+
+    <div class="setup-card" data-lbl="CARGAR PARTIDA GUARDADA" style="margin-top:14px;">
+      <div class="setup-text">Pega tu código de partida para continuar donde lo dejaste.</div>
+      <input class="inp" type="text" id="inp-load" placeholder="Código de partida..." style="margin-bottom:10px;" />
+      <button class="btn-main" onclick="loadFromCode()" style="margin-top:0;">[ CARGAR PARTIDA ]</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OFFICE ══ -->
+<div id="screen-office" class="screen">
+  <div class="hdr">
+    <div><div class="logo">RASTROS</div><div class="logo-sub" id="office-sub">INVESTIGACIÓN PRIVADA</div></div>
+    <div class="hud">
+      💰 <span class="val" id="hud-cash">$0</span> &nbsp;
+      ⭐ <span class="val pts" id="hud-pts">0 pts</span><br>
+      <span id="hud-rank-name" style="color:var(--amber-dim);font-size:0.7rem;">—</span>
+    </div>
+  </div>
+  <div id="rank-bar"></div>
+  <div class="office-grid">
+    <div class="office-obj" onclick="goFax()">
+      <span class="obj-icon">📠</span>
+      <div class="obj-name">Bandeja de Fax</div>
+      <div class="obj-desc">Casos nuevos generados por IA. Cada uno es único.</div>
+      <div class="badge">NUEVO</div>
+    </div>
+    <div class="office-obj" id="active-obj" onclick="resumeCase()" style="display:none">
+      <span class="obj-icon">🗂️</span>
+      <div class="obj-name">Caso Activo</div>
+      <div class="obj-desc" id="active-obj-desc">—</div>
+    </div>
+    <div class="office-obj" onclick="showScreen('screen-tech')">
+      <span class="obj-icon">🔬</span>
+      <div class="obj-name">Equipamiento</div>
+      <div class="obj-desc">Mejora tus herramientas de investigación.</div>
+    </div>
+    <div class="office-obj" onclick="showScreen('screen-dossiers')">
+      <span class="obj-icon">📋</span>
+      <div class="obj-name">Archivos M.A.L.O.S.</div>
+      <div class="obj-desc">Expedientes de la organización criminal.</div>
+    </div>
+  </div>
+  <div class="shelf">
+    <div class="shelf-label">Estantería</div>
+    <div class="shelf-books">Derecho Internacional · Códigos Penales Comparados<br>Manual de Filatura '89 · Atlas Mundial '93 · Balística Forense</div>
+    <div class="carmen-book" onclick="carmenEgg()" title="..."><span>¿DÓNDE ESTÁ C.S.?</span></div>
+  </div>
+  <div id="carmen-msg">"Un clásico. La compré en un mercadillo hace años. Nunca la atrapé." — nota adhesiva en la contraportada.</div>
+  <div class="stats-bar" id="stats-bar"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;">
+    <button class="btn-small" onclick="showSaveModal()">💾 GUARDAR PARTIDA</button>
+    <button class="btn-small" onclick="changeApiKey()">⚙ API KEY</button>
+  </div>
+</div>
+
+<!-- ══ FAX ══ -->
+<div id="screen-fax" class="screen">
+  <div class="hdr">
+    <div><div class="logo">RASTROS</div><div class="logo-sub">BANDEJA DE FAX</div></div>
+    <div class="hud"><span class="val" id="hud-cash-fax">$0</span><br><span class="btn-small" onclick="showScreen('screen-office')" style="cursor:pointer;">← OFICINA</span></div>
+  </div>
+  <div class="section-hdr">
+    <span>CASOS DISPONIBLES</span>
+    <button class="btn-small" onclick="generateMoreCases()">+ GENERAR MÁS</button>
+  </div>
+  <div id="case-list"></div>
+</div>
+
+<!-- ══ INVESTIGATION ══ -->
+<div id="screen-inv" class="screen">
+  <div class="hdr">
+    <div><div class="logo">RASTROS</div><div class="logo-sub" id="inv-city-hdr">EN CAMPO</div></div>
+    <div class="hud">
+      💰 <span class="val" id="hud-cash-inv">$0</span> &nbsp;
+      ⭐ <span class="val pts" id="hud-pts-inv">0</span><br>
+      <span class="btn-small" onclick="abandonCase()" style="cursor:pointer;">× ABANDONAR</span>
+    </div>
+  </div>
+  <div class="progress-bar" id="progress-bar"></div>
+  <div class="mob-tabs">
+    <button class="mob-tab active" onclick="mobTab('main',this)">CASO</button>
+    <button class="mob-tab" onclick="mobTab('side',this)">PISTAS</button>
+    <button class="mob-tab" onclick="mobTab('log',this)">REGISTRO</button>
+  </div>
+  <div class="inv-layout">
+    <div id="main-col">
+      <div id="polaroid-area"></div>
+      <div class="panel panel-text" data-lbl="SITUACIÓN" id="narr-panel">...</div>
+      <div class="panel" data-lbl="ACCIONES" id="actions-panel"></div>
+    </div>
+    <div class="side-col" id="side-col">
+      <div class="panel" data-lbl="PISTAS (0)" id="clues-panel"><div class="no-clues">Sin pistas aún.</div></div>
+      <div class="panel" data-lbl="REGISTRO" id="log-panel"><div class="log-feed" id="log-feed"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ARREST ══ -->
+<div id="screen-arrest" class="screen">
+  <div class="hdr">
+    <div><div class="logo">RASTROS</div><div class="logo-sub">ORDEN DE ARRESTO</div></div>
+    <div class="hud"><span class="val" id="hud-cash-arr">$0</span></div>
+  </div>
+  <div class="panel panel-text" data-lbl="INSTRUCCIONES" style="margin-bottom:14px;">
+    Elige al sospechoso correcto antes de llamar a las autoridades. Un error y desaparece.
+  </div>
+  <div class="arrest-grid" id="arrest-grid"></div>
+  <button class="btn-main" id="arrest-confirm" onclick="confirmArrest()" disabled>[ EMITIR ORDEN DE ARRESTO ]</button>
+</div>
+
+<!-- ══ RESULT ══ -->
+<div id="screen-result" class="screen">
+  <div class="hdr"><div><div class="logo">RASTROS</div><div class="logo-sub">CIERRE DE CASO</div></div></div>
+  <div class="result-wrap" id="result-content"></div>
+</div>
+
+<!-- ══ TECH ══ -->
+<div id="screen-tech" class="screen">
+  <div class="hdr">
+    <div><div class="logo">RASTROS</div><div class="logo-sub">CATÁLOGO DE EQUIPOS</div></div>
+    <div class="hud"><span class="val" id="hud-cash-tech">$0</span><br><span class="btn-small" onclick="showScreen('screen-office')" style="cursor:pointer;">← OFICINA</span></div>
+  </div>
+  <div id="tech-list"></div>
+</div>
+
+<!-- ══ DOSSIERS ══ -->
+<div id="screen-dossiers" class="screen">
+  <div class="hdr">
+    <div><div class="logo">RASTROS</div><div class="logo-sub">ARCHIVOS M.A.L.O.S.</div></div>
+    <div class="hud"><span class="btn-small" onclick="showScreen('screen-office')" style="cursor:pointer;">← OFICINA</span></div>
+  </div>
+  <div id="dossier-content"></div>
+</div>
+
+</div><!-- /app -->
+
+<!-- ══ INDIANA JONES MAP ══ -->
+<div class="map-overlay" id="map-overlay">
+  <div class="map-container">
+    <div class="map-title" id="map-title">— RASTREANDO DESTINO —</div>
+    <div class="map-svg-wrap" id="map-svg-wrap">
+      <!-- SVG injected by JS -->
+    </div>
+    <div class="map-caption" id="map-caption"></div>
+    <button class="map-close-btn" id="map-close-btn" onclick="closeMap()" style="display:none;">[ CONTINUAR ]</button>
+  </div>
+</div>
+
+<!-- ══ DIRECT ARREST MODAL ══ -->
+<div class="modal-overlay" id="direct-modal">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--gold);">⚡ CONFRONTACIÓN DIRECTA</div>
+    <div style="font-size:0.75rem;color:var(--amber-dim);margin-bottom:14px;line-height:1.8;">
+      Sin orden oficial. Vas a por él directamente.<br>
+      <span style="color:var(--gold);">✓ Acierto: +50% de bonus en dinero y puntos</span><br>
+      <span style="color:var(--red);">✗ Error: pierdes $500 y el caso se cierra sin cobrar</span>
+    </div>
+    <div class="arrest-grid" id="direct-grid" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-main" id="direct-confirm" onclick="confirmDirect()" disabled style="margin-top:0;border-color:var(--gold);color:var(--gold);">[ CONFRONTAR ]</button>
+      <button class="btn-small" onclick="closeDirect()" style="flex:1;text-align:center;">CANCELAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRAVEL MODAL ══ -->
+<div class="modal-overlay" id="travel-modal">
+  <div class="modal">
+    <div class="modal-title">✈ CAMBIAR CIUDAD</div>
+    <div style="font-size:0.72rem;color:var(--amber-dim);margin-bottom:12px;">El rastro lleva a otra ciudad. Cada vuelo sale de tus fondos.</div>
+    <div id="flight-list"></div>
+    <button class="btn-small" onclick="closeModal()" style="margin-top:4px;width:100%;text-align:center;">CANCELAR</button>
+  </div>
+</div>
+
+<!-- ══ API KEY MODAL ══ -->
+<div class="modal-overlay" id="apikey-modal">
+  <div class="modal">
+    <div class="modal-title">⚙ CAMBIAR API KEY</div>
+    <div style="font-size:0.72rem;color:var(--amber-dim);margin-bottom:12px;">Tu progreso se conserva. Solo se actualiza la clave.</div>
+    <input class="inp" type="password" id="new-api-key-input" placeholder="AIzaSy..." autocomplete="off" style="margin-bottom:10px;" />
+    <div style="display:flex;gap:8px;">
+      <button class="btn-main" onclick="confirmNewKey()" style="flex:1;margin-top:0;">[ GUARDAR ]</button>
+      <button class="btn-small" onclick="closeApiModal()" style="flex:1;text-align:center;">CANCELAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SAVE MODAL ══ -->
+<div class="modal-overlay" id="save-modal">
+  <div class="modal">
+    <div class="modal-title">💾 CÓDIGO DE PARTIDA</div>
+    <div style="font-size:0.72rem;color:var(--amber-dim);margin-bottom:8px;">Copia este código para continuar en otro dispositivo.</div>
+    <div class="save-code" id="save-code-display"></div>
+    <button class="btn-main" onclick="copySaveCode()" style="margin-bottom:8px;">[ COPIAR CÓDIGO ]</button>
+    <button class="btn-small" onclick="closeSaveModal()" style="width:100%;text-align:center;">CERRAR</button>
+  </div>
+</div>
+
+<!-- ══ CASH ANIMATION ══ -->
+<div class="cash-anim-wrap" id="cash-anim-wrap"></div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div style="font-size:2rem;">🔍</div>
+  <div class="loading-text" id="loading-text">GENERANDO CASO<span class="loading-dots"></span></div>
+  <div style="font-size:0.6rem;color:#3a2200;letter-spacing:2px;">MOTOR NARRATIVO ACTIVO</div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <span id="status-txt" class="cursor-blink">SISTEMA LISTO</span>
+  <span style="color:#1a1000;">RASTROS v3.0 · GEMINI AI</span>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  STATIC DATA
+// ═══════════════════════════════════════
+
+// City data with approximate map coordinates (% of SVG viewport)
+const CITIES = {
+  'Buenos Aires':{ascii:`  .-=-.   _____\n /     \\ |BSAS |\n|  .-.  ||_____|\n \\     / |||||\n  '-=-'  |||||`,flavor:'Diesel y café quemado. Los taxistas de San Telmo hablan sin parar.',cost:650,x:27,y:76},
+  'Tokyo':{ascii:`  _____\n |TYO  |\n | [[[]]]\n |_____|\n  | | |`,flavor:'Neón en el asfalto mojado. El metro llega en punto. Nadie habla, todos ven.',cost:980,x:83,y:35},
+  'Estambul':{ascii:`  /\\ /\\\n (  *  )\n  \\___/\n __|___\n| BGW |`,flavor:'Dos continentes, una ciudad. El Gran Bazar tiene diez mil puertas.',cost:420,x:56,y:33},
+  'Lagos':{ascii:` /\\_/\\\n(  o  )\n >___<\n|=====|\n|LAGOS|`,flavor:'La ciudad más grande de África no duerme. El puerto mueve todo.',cost:530,x:47,y:58},
+  'São Paulo':{ascii:`[SSS]\n|   |\n|SAO|\n| P |\n|___|`,flavor:'Dieciséis millones de personas. Aquí nadie es invisible... casi.',cost:590,x:31,y:73},
+  'Praga':{ascii:`  /\\\n /  \\\n| /\\ |\n|/PRG\\|\n|____|`,flavor:'Piedras medievales, secretos modernos. El mercado negro de arte tiene siglos aquí.',cost:380,x:52,y:28},
+  'Bangkok':{ascii:`~~~~~\n[BKK]\n|===|\n|wai|\n|___|`,flavor:'El calor pega desde el aeropuerto. Mercados flotantes, rutas que ningún mapa muestra.',cost:870,x:77,y:50},
+  'Ciudad de México':{ascii:` _____\n| MEX |\n|=====|\n|  *  |\n|_____|`,flavor:'El DF nunca duerme del todo. Capas de historia que alguien prefiere enterradas.',cost:480,x:16,y:45},
+  'Moscú':{ascii:`[[[]]]\n|=====|\n| MOW |\n[     ]`,flavor:'Frío de huesos. Los oligarcas y los criminales comparten más de un club.',cost:450,x:60,y:22},
+  'Nairobi':{ascii:` /\\  /\\\n/  \\/  \\\n| NBO  |\n|______|`,flavor:'Hub de África Oriental. Lo que no sale por Mombasa, sale por aquí. En efectivo.',cost:610,x:57,y:58},
+  'Amsterdam':{ascii:`~_~_~_~\n| AMS |\n[=====]\n|canal|\n~~~~~~~`,flavor:'Los canales llevan mercancía desde el siglo XVII. La diferencia entre antigüedades y contrabando es filosófica.',cost:360,x:49,y:25},
+  'Mumbai':{ascii:`  ___\n |BOM|\n |===|\n [   ]\n  | |`,flavor:'El caos de Dharavi esconde economías enteras. Los muelles del puerto, preguntar cuesta.',cost:750,x:68,y:47},
+  'Cairo':{ascii:`  /\\  /\\\n /  \\/  \\\n| CAIRO |\n|=======|`,flavor:'El polvo de tres milenios en el aire. Todo tiene precio, todo tiene historia.',cost:490,x:55,y:42},
+  'Singapur':{ascii:`___\n|SIN|\n|===|\n~~~~~`,flavor:'Ciudad-estado, perfección artificial. Contenedores que mueven el 20% del comercio mundial.',cost:910,x:79,y:57},
+  'Lima':{ascii:` ___\n|LIM|\n|===|\n| * |\n|___|`,flavor:'La ciudad gris. El mar frío. Las catacumbas de la catedral guardan más de lo que admiten.',cost:560,x:22,y:68},
+  'Viena':{ascii:`  /\\\n |VIE|\n |===|\n  | |`,flavor:'La ciudad de los museos y las conspiraciones. Intacta después de dos guerras mundiales.',cost:370,x:53,y:27},
+  'Johannesburgo':{ascii:`[JHB]\n|===|\n| * |\n|___|`,flavor:'La ciudad del oro y los diamantes. Todo tiene historia de sangre, todo tiene comprador.',cost:640,x:54,y:72},
+  'Seoul':{ascii:`[ICN]\n|===|\n|SEL|\n|___|`,flavor:'Tecnología y tradición en capas. La velocidad de internet más rápida del mundo oculta mercados muy lentos.',cost:960,x:82,y:32},
+  'Beirut':{ascii:` ___\n|BEY|\n~~~~~\n|   |`,flavor:'La ciudad que siempre renace. Entre ruinas y restaurantes de lujo, el contrabando es un arte.',cost:410,x:57,y:37},
+  'Shanghai':{ascii:`[PVG]\n|===|\n|SHA|\n[___]`,flavor:'La ciudad más vertical del mundo. El dinero se mueve más rápido que las personas.',cost:890,x:81,y:38},
+};
+
+const TECH_CATALOG = [
+  {id:'basic',name:'Intuición de Campo',desc:'Tu herramienta original. Observación, testigos, inferencia.',price:0,owned:true,clueLabel:'Investigar la escena'},
+  {id:'photo',name:'Cámara Polaroid + Lupa',desc:'Documentación fotográfica. Registra lo que el ojo pierde.',price:400,owned:false,clueLabel:'Fotografiar evidencias'},
+  {id:'fingerprints',name:'Kit de Huellas Dactilares',desc:'Polvo de carbono y cinta. Identifica superficies tocadas.',price:800,owned:false,clueLabel:'Análisis de huellas'},
+  {id:'chem',name:'Kit de Análisis Químico',desc:'Reactivos portátiles. Detecta trazas de materiales y pigmentos.',price:1500,owned:false,clueLabel:'Análisis químico'},
+  {id:'sat',name:'Acceso Base de Datos',desc:'Conexión encriptada a registros internacionales. No oficial.',price:2500,owned:false,clueLabel:'Consultar registros'},
+  {id:'dna',name:'Laboratorio ADN Portátil',desc:'Tecnología experimental. Muestra biológica. Resultado en 48h.',price:3500,owned:false,clueLabel:'Análisis de ADN'},
+];
+
+const RANKS = [
+  {name:'Novato',icon:'🕵️',min:0,max:3,desc:'El alquiler sigue siendo un problema.'},
+  {name:'Investigador',icon:'🔍',min:4,max:9,desc:'Los clientes preguntan por ti.'},
+  {name:'Detective',icon:'📁',min:10,max:19,desc:'M.A.L.O.S. tiene un archivo sobre ti.'},
+  {name:'Inspector',icon:'🗂️',min:20,max:34,desc:'Interpol te consulta off-the-record.'},
+  {name:'Maestro',icon:'🏆',min:35,max:59,desc:'Los criminales evitan tus ciudades.'},
+  {name:'Leyenda',icon:'⭐',min:60,max:9999,desc:'Tu nombre aparece en documentos clasificados.'},
+];
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+
+let G = loadState();
+let pendingCases = [];
+let selectedSuspect = null;
+let selectedDirect = null;
+
+function defaultState() {
+  return {
+    name: 'Agente',
+    cash: 4200,
+    points: 0,
+    solved: 0,
+    failed: 0,
+    tech: ['basic'],
+    currentCase: null,
+    currentCityIdx: 0,
+    cluesFound: [],
+    log: [],
+    malosEncounters: 0,
+    malosMembers: [],
+    visitedCities: [],
+    caseHistory: [],
+    apiKey: null,
+  };
+}
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('rastros_v3');
+    if (s) return {...defaultState(), ...JSON.parse(s)};
+  } catch(e) {}
+  return defaultState();
+}
+
+function saveState() {
+  try { localStorage.setItem('rastros_v3', JSON.stringify(G)); } catch(e) {}
+}
+
+// ═══════════════════════════════════════
+//  UI UTILS
+// ═══════════════════════════════════════
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  setStatus('SISTEMA LISTO');
+  if (id === 'screen-tech') renderTechScreen();
+  if (id === 'screen-dossiers') renderDossiers();
+  updateHUD();
+}
+
+function setStatus(txt) {
+  const el = document.getElementById('status-txt');
+  if (el) el.textContent = txt;
+}
+
+function showLoading(txt='PROCESANDO') {
+  document.getElementById('loading-text').innerHTML = txt + '<span class="loading-dots"></span>';
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+function updateHUD() {
+  const fmt = n => '$' + n.toLocaleString('es');
+  document.querySelectorAll('[id^="hud-cash"]').forEach(el => {
+    el.textContent = fmt(G.cash);
+    el.className = 'val' + (G.cash < 600 ? ' danger' : '');
+  });
+  document.querySelectorAll('[id^="hud-pts"]').forEach(el => el.textContent = G.points.toLocaleString('es') + ' pts');
+  const rank = getRank();
+  const nameEl = document.getElementById('hud-rank-name');
+  if (nameEl) nameEl.textContent = rank.icon + ' ' + rank.name;
+  renderRankBar();
+  renderStatsBar();
+}
+
+function getRank() {
+  return RANKS.find(r => G.solved >= r.min && G.solved <= r.max) || RANKS[RANKS.length-1];
+}
+
+function renderRankBar() {
+  const el = document.getElementById('rank-bar');
+  if (!el) return;
+  const rank = getRank();
+  const nextRank = RANKS[RANKS.indexOf(rank)+1];
+  const progress = nextRank ? Math.round(((G.solved - rank.min) / (nextRank.min - rank.min)) * 100) : 100;
+  el.innerHTML = `<div class="rank-display">
+    <div class="rank-icon">${rank.icon}</div>
+    <div style="flex:1">
+      <div class="rank-name">${rank.name} — ${G.name}</div>
+      <div class="rank-desc">${rank.desc}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+        <div class="xp-track" style="flex:1;"><div class="xp-fill" style="width:${progress}%"></div></div>
+        <div class="xp-label">${nextRank ? `${G.solved - rank.min}/${nextRank.min - rank.min}` : 'MAX'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderStatsBar() {
+  const el = document.getElementById('stats-bar');
+  if (!el) return;
+  el.innerHTML = [
+    `<div class="stat-item">RESUELTOS <span class="sv">${G.solved}</span></div>`,
+    `<div class="stat-item">FALLIDOS <span class="sv" style="color:var(--red)">${G.failed}</span></div>`,
+    `<div class="stat-item">PUNTOS <span class="sv gold">${G.points.toLocaleString('es')}</span></div>`,
+    `<div class="stat-item">M.A.L.O.S. <span class="sv" style="color:var(--red)">${G.malosEncounters}</span></div>`,
+    `<div class="stat-item">CIUDADES <span class="sv">${G.visitedCities.length}</span></div>`,
+  ].join('');
+}
+
+function addLog(msg, type='') {
+  const ts = new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  G.log.unshift({ts,msg,type});
+  if (G.log.length > 60) G.log = G.log.slice(0,60);
+  renderLog();
+}
+
+function renderLog() {
+  const feed = document.getElementById('log-feed');
+  if (!feed) return;
+  feed.innerHTML = G.log.slice(0,25).map(e =>
+    `<div class="log-entry ${e.type}">[${e.ts}] ${e.msg}</div>`
+  ).join('');
+}
+
+function mobTab(tab, btn) {
+  document.querySelectorAll('.mob-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const mainCol = document.getElementById('main-col');
+  const sideCol = document.getElementById('side-col');
+  if (tab === 'main') { mainCol.style.display='block'; sideCol.classList.remove('show'); }
+  else { mainCol.style.display='none'; sideCol.classList.add('show'); }
+  if (tab === 'log') renderLog();
+}
+
+function carmenEgg() {
+  const m = document.getElementById('carmen-msg');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════
+//  SETUP & API KEY
+// ═══════════════════════════════════════
+
+function saveSetup() {
+  const name = document.getElementById('inp-name').value.trim() || 'Agente';
+  const key = document.getElementById('inp-key').value.trim();
+  if (!key || !key.startsWith('AIza')) { alert('Introduce una API key válida (empieza por AIza...)'); return; }
+  G.name = name;
+  G.apiKey = key;
+  saveState();
+  initOffice();
+}
+
+function changeApiKey() {
+  document.getElementById('new-api-key-input').value = '';
+  document.getElementById('apikey-modal').classList.add('open');
+}
+function confirmNewKey() {
+  const key = document.getElementById('new-api-key-input').value.trim();
+  if (!key || !key.startsWith('AIza')) { alert('API key inválida'); return; }
+  G.apiKey = key;
+  saveState();
+  pendingCases = [];
+  closeApiModal();
+  setStatus('API KEY ACTUALIZADA');
+}
+function closeApiModal() { document.getElementById('apikey-modal').classList.remove('open'); }
+
+// ═══════════════════════════════════════
+//  SAVE / LOAD
+// ═══════════════════════════════════════
+
+function showSaveModal() {
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify(G))));
+  document.getElementById('save-code-display').textContent = code;
+  document.getElementById('save-modal').classList.add('open');
+}
+function closeSaveModal() { document.getElementById('save-modal').classList.remove('open'); }
+
+function copySaveCode() {
+  const code = document.getElementById('save-code-display').textContent;
+  navigator.clipboard.writeText(code).then(() => setStatus('CÓDIGO COPIADO AL PORTAPAPELES')).catch(() => setStatus('SELECCIONA Y COPIA MANUALMENTE'));
+}
+
+function loadFromCode() {
+  const code = document.getElementById('inp-load').value.trim();
+  if (!code) { alert('Introduce un código de partida'); return; }
+  try {
+    const data = JSON.parse(decodeURIComponent(escape(atob(code))));
+    const key = G.apiKey || data.apiKey;
+    G = {...defaultState(), ...data, apiKey: key};
+    saveState();
+    initOffice();
+  } catch(e) {
+    alert('Código inválido o corrupto.');
+  }
+}
+
+// ═══════════════════════════════════════
+//  GEMINI API — WITH FALLBACK
+// ═══════════════════════════════════════
+
+async function callGemini(prompt) {
+  const models = ['gemini-3.1-flash-lite-preview', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+  let lastError = null;
+  for (const model of models) {
+    try {
+      setStatus('CONECTANDO — ' + model);
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${G.apiKey}`;
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          contents:[{parts:[{text: prompt}]}],
+          generationConfig:{temperature:0.9, maxOutputTokens:2000}
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        const msg = err?.error?.message || ('Error HTTP ' + res.status);
+        if (res.status === 429 || msg.includes('quota') || msg.includes('Quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('not found')) {
+          lastError = new Error(model + ': no disponible');
+          continue;
+        }
+        throw new Error(msg);
+      }
+      const data = await res.json();
+      setStatus('MODELO ACTIVO — ' + model);
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } catch(e) {
+      if (e.message && (e.message.includes('no disponible') || e.message.includes('not found'))) { lastError = e; continue; }
+      throw e;
+    }
+  }
+  throw lastError || new Error('Todos los modelos han agotado su cuota. Inténtalo más tarde.');
+}
+
+// ═══════════════════════════════════════
+//  CASE GENERATION
+// ═══════════════════════════════════════
+
+function buildCasePrompt() {
+  const cityNames = Object.keys(CITIES);
+  const rank = getRank();
+  const isMalos = Math.random() < (0.2 + G.malosEncounters * 0.05);
+  const difficulty = G.solved < 3 ? 'FÁCIL' : G.solved < 10 ? 'MEDIO' : G.solved < 25 ? 'DIFÍCIL' : 'MUY DIFÍCIL';
+  const recentCases = G.caseHistory.slice(0,3).map(c => `"${c.title}" (${c.result})`).join(', ');
+  const visitedStr = G.visitedCities.slice(0,8).join(', ') || 'ninguna aún';
+  const availableTech = G.tech;
+  const routeLength = difficulty === 'FÁCIL' ? 2 : difficulty === 'MEDIO' ? 3 : 4;
+  const startCity = cityNames.filter(c => !G.visitedCities.slice(-3).includes(c))[Math.floor(Math.random() * cityNames.length)] || cityNames[0];
+  const route = [startCity];
+  const others = cityNames.filter(c => c !== startCity);
+  for (let i = 1; i < routeLength; i++) {
+    const pool = others.filter(c => !route.includes(c));
+    route.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  const techStr = availableTech.map(t => { const tc = TECH_CATALOG.find(x => x.id===t); return `${t}(${tc?.clueLabel||t})`; }).join(', ');
+  const stolenItems = ['una pintura del siglo XVII','documentos clasificados de un banco central','joyas históricas de la colección real','una reliquia arqueológica precolombina','datos biométricos de millones de ciudadanos','un meteorito de valor científico único','planos de una planta nuclear','colección de sellos valorada en millones','archivo digital de una fiscalía anticorrupción','cuatro bronces históricos recién repatriados','prototipo de algoritmo de cifrado','escultura precolombina de museo nacional'];
+  const stolen = stolenItems[Math.floor(Math.random()*stolenItems.length)];
+
+  return `Eres el motor narrativo de RASTROS, juego de detective privado años 80-90, estética noir.
+
+INVESTIGADOR: ${G.name} · Rango: ${rank.name} · Casos: ${G.solved} · Fondos: $${G.cash}
+TECNOLOGÍA: ${techStr}
+CIUDADES VISITADAS: ${visitedStr}
+CASOS RECIENTES: ${recentCases||'ninguno'}
+M.A.L.O.S. ENCUENTROS: ${G.malosEncounters}
+
+PARÁMETROS: Dificultad ${difficulty} · M.A.L.O.S.: ${isMalos} · Objeto: ${stolen} · Ruta: ${route.join(' → ')}
+
+Genera un caso de investigación. Responde SOLO con JSON válido, sin markdown, sin texto extra:
+
+{
+  "title": "título evocador máximo 6 palabras",
+  "client": "nombre y descripción breve del cliente",
+  "intro": "párrafo introductorio noir 2-3 frases en español",
+  "reward": número 2000-9000,
+  "points": número 100-800,
+  "org": ${isMalos},
+  "difficulty": "${difficulty}",
+  "villain": {
+    "name": "nombre completo",
+    "alias": "apodo entre comillas",
+    "emoji": "emoji representativo",
+    "nationality": "nacionalidad",
+    "backstory": "historia oscura 2-3 frases",
+    "traits": ["rasgo observable 1","rasgo 2","rasgo 3"],
+    "motive": "motivación en frase corta",
+    "specialty": "tipo de crímenes",
+    "quote": "frase cínica al ser arrestado"
+  },
+  "decoys": [
+    {"name":"sospechoso falso 1","alias":"apodo","emoji":"emoji","description":"descripción plausible pero inocente"},
+    {"name":"sospechoso falso 2","alias":"apodo","emoji":"emoji","description":"descripción"},
+    {"name":"sospechoso falso 3","alias":"apodo","emoji":"emoji","description":"descripción"}
+  ],
+  "cities": [
+    {
+      "name": "${route[0]}",
+      "clues": [
+        {"tech":"basic","type":"TESTIGO","text":"pista con dato específico entre <span class='cl'>etiquetas</span>"},
+        {"tech":"${availableTech.includes('fingerprints')?'fingerprints':'basic'}","type":"${availableTech.includes('fingerprints')?'HUELLAS':'ENTORNO'}","text":"segunda pista más técnica"}
+      ]
+    }${route.slice(1).map((city,i)=>`
+    ,{
+      "name": "${city}",
+      "clues": [
+        {"tech":"${i===route.length-2&&availableTech.includes('dna')?'dna':availableTech.includes('chem')?'chem':'basic'}","type":"${i===route.length-2?'RASTRO FINAL':'INFORMANTE'}","text":"${i===route.length-2?'pista final que confirma que el sospechoso está en esta ciudad ahora':'pista intermedia con nombre o lugar concreto'}"}
+      ]
+    }`).join('')}
+  ],
+  "finalCity": "${route[route.length-1]}"
+}
+
+Reglas: tono noir seco, pistas culturalmente específicas a cada ciudad, villano con personalidad única. Si M.A.L.O.S., mencionarlo explícitamente. Menciona al investigador ${G.name} si hay casos previos.`;
+}
+
+async function generateCase() {
+  showLoading('GENERANDO CASO');
+  try {
+    const raw = await callGemini(buildCasePrompt());
+    const clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+    const caseData = JSON.parse(clean);
+    caseData.id = 'c' + Date.now() + Math.random().toString(36).slice(2,5);
+    return caseData;
+  } finally {
+    hideLoading();
+  }
+}
+
+// ═══════════════════════════════════════
+//  FAX & CASE LIST
+// ═══════════════════════════════════════
+
+async function goFax() {
+  showScreen('screen-fax');
+  const listEl = document.getElementById('case-list');
+  if (pendingCases.length === 0) {
+    listEl.innerHTML = '<div class="case-item generating"><div class="case-title">Generando casos...</div></div>';
+    try {
+      showLoading('RECIBIENDO FAX');
+      const [c1,c2] = await Promise.all([generateCase(), generateCase()]);
+      hideLoading();
+      pendingCases = [c1, c2];
+      listEl.innerHTML = '';
+      pendingCases.forEach(c => renderCaseItem(c, listEl));
+    } catch(e) {
+      hideLoading();
+      listEl.innerHTML = `<div class="case-item" style="border-left-color:var(--red)">
+        <div class="case-title" style="color:var(--red)">Error de conexión</div>
+        <div class="case-sub">No se pudieron recibir casos. Verifica tu API key de Gemini.<br><small style="color:var(--red-dim)">${e.message}</small></div>
+        <button class="btn-small" onclick="goFax()" style="margin-top:10px">REINTENTAR</button>
+      </div>`;
+    }
+  } else {
+    listEl.innerHTML = '';
+    pendingCases.forEach(c => renderCaseItem(c, listEl));
+  }
+  updateHUD();
+}
+
+async function generateMoreCases() {
+  const listEl = document.getElementById('case-list');
+  const ph = document.createElement('div');
+  ph.className = 'case-item generating';
+  ph.innerHTML = '<div class="case-title">Generando...</div>';
+  listEl.appendChild(ph);
+  try {
+    const c = await generateCase();
+    pendingCases.push(c);
+    ph.remove();
+    renderCaseItem(c, listEl);
+  } catch(e) {
+    ph.remove();
+    const errDiv = document.createElement('div');
+    errDiv.className = 'case-item';
+    errDiv.style.borderLeftColor = 'var(--red)';
+    errDiv.innerHTML = `<div class="case-title" style="color:var(--red)">Error</div><div class="case-sub">${e.message}</div>`;
+    listEl.appendChild(errDiv);
+  }
+}
+
+function renderCaseItem(c, container) {
+  const diffClass = {FÁCIL:'diff-easy',MEDIO:'diff-med',DIFÍCIL:'diff-hard','MUY DIFÍCIL':'diff-hard'}[c.difficulty]||'diff-med';
+  const div = document.createElement('div');
+  div.className = 'case-item' + (c.org ? ' malos' : '');
+  div.innerHTML = `<div class="case-row">
+    <div style="flex:1">
+      <div class="case-title">${c.title}</div>
+      <div class="case-sub">${c.client}<br>${c.intro}</div>
+      <div class="case-tags">
+        ${c.org ? '<span class="tag org">● M.A.L.O.S.</span>' : ''}
+        <span class="tag loc">📍 ${c.cities[0].name}</span>
+        <span class="tag ${diffClass}">${c.difficulty}</span>
+      </div>
+    </div>
+    <div class="case-reward">
+      <div class="reward-amt">$${Number(c.reward).toLocaleString('es')}</div>
+      <div class="reward-pts">⭐ ${Number(c.points||200).toLocaleString('es')} pts</div>
+      <div class="reward-lbl">HONORARIO</div>
+    </div>
+  </div>`;
+  div.onclick = () => startCase(c);
+  container.appendChild(div);
+}
+
+// ═══════════════════════════════════════
+//  START / RESUME CASE
+// ═══════════════════════════════════════
+
+function startCase(c) {
+  G.currentCase = c;
+  G.currentCityIdx = 0;
+  G.cluesFound = [];
+  G.log = [];
+  pendingCases = pendingCases.filter(x => x.id !== c.id);
+  if (!G.visitedCities.includes(c.cities[0].name)) G.visitedCities.push(c.cities[0].name);
+  if (c.org && !G.malosMembers.find(m => m.name === c.villain.name)) {
+    G.malosMembers.push({name: c.villain.name, alias: c.villain.alias});
+    G.malosEncounters++;
+  }
+  document.getElementById('active-obj').style.display = 'block';
+  document.getElementById('active-obj-desc').textContent = c.title;
+  addLog(`Caso aceptado: "${c.title}". Destino: ${c.cities[0].name}.`, 'imp');
+  saveState();
+  showScreen('screen-inv');
+  renderInvestigation();
+}
+
+function resumeCase() {
+  if (!G.currentCase) return;
+  showScreen('screen-inv');
+  renderInvestigation();
+}
+
+function abandonCase() {
+  if (!confirm('¿Abandonar el caso?')) return;
+  G.currentCase = null;
+  document.getElementById('active-obj').style.display = 'none';
+  addLog('Caso abandonado.', 'bad');
+  saveState();
+  showScreen('screen-office');
+}
+
+// ═══════════════════════════════════════
+//  INVESTIGATION
+// ═══════════════════════════════════════
+
+function renderInvestigation() {
+  const c = G.currentCase;
+  if (!c) return;
+  const cityData = c.cities[G.currentCityIdx];
+  const cityName = cityData.name;
+  const city = CITIES[cityName] || {ascii:'  ???  ',flavor:'Lugar sin nombre en ningún mapa.',cost:500};
+  const isLast = G.currentCityIdx === c.cities.length - 1;
+
+  document.getElementById('inv-city-hdr').textContent = cityName.toUpperCase();
+
+  // Progress dots
+  document.getElementById('progress-bar').innerHTML =
+    c.cities.map((cd,i) => `<div class="p-dot ${i<G.currentCityIdx?'done':i===G.currentCityIdx?'now':''}" title="${cd.name}"></div>`).join('') +
+    `<span class="p-label">${cityName}</span>`;
+
+  // Polaroid
+  const returnVisit = G.visitedCities.filter(v=>v===cityName).length > 1;
+  document.getElementById('polaroid-area').innerHTML = `<div class="polaroid">
+    <div class="pol-img"><div class="city-ascii">${city.ascii}</div></div>
+    <div class="pol-bottom">
+      <div class="pol-city">${cityName}</div>
+      <div class="pol-date">${1987+Math.floor(G.solved/3)} · ${String(Math.floor(Math.random()*12)+1).padStart(2,'0')}</div>
+    </div>
+  </div>`;
+
+  // Narrative
+  let narr = `<div class="panel-text"><span class="hi">${cityName}.</span> ${city.flavor}`;
+  if (returnVisit) narr += `<br><span style="color:var(--amber-dim)">— Ya estuviste aquí antes. La ciudad te recuerda.</span>`;
+  if (isLast) narr += `<br><br><span class="neg">▶ El rastro termina aquí. El sospechoso está en esta ciudad.</span>`;
+  narr += '</div>';
+  document.getElementById('narr-panel').innerHTML = narr;
+
+  renderActions(cityData, isLast);
+  renderClues();
+  renderLog();
+}
+
+function renderActions(cityData, isLast) {
+  const panel = document.getElementById('actions-panel');
+  let html = '';
+
+  cityData.clues.forEach((cl,i) => {
+    const key = `${G.currentCityIdx}-${i}`;
+    const found = G.cluesFound.includes(key);
+    const hasTech = G.tech.includes(cl.tech);
+    const tc = TECH_CATALOG.find(t=>t.id===cl.tech);
+    const cost = {basic:0,photo:50,fingerprints:80,chem:150,sat:120,dna:300}[cl.tech]||0;
+    const label = tc?.clueLabel||'Investigar';
+    if (found) {
+      html += `<button class="action-btn" disabled>✓ ${label} <span class="locked">OBTENIDA</span></button>`;
+    } else if (!hasTech) {
+      html += `<button class="action-btn" disabled>${label} <span class="locked">REQUIERE: ${tc?.name||cl.tech}</span></button>`;
+    } else {
+      html += `<button class="action-btn" onclick="getClue(${G.currentCityIdx},${i},${cost})">${label}${cost>0?`<span class="cost">-$${cost}</span>`:''}</button>`;
+    }
+  });
+
+  const cluesFoundHere = cityData.clues.filter((_,i)=>G.cluesFound.includes(`${G.currentCityIdx}-${i}`)).length;
+  html += `<button class="action-btn" onclick="payHotel(120)">Pasar la noche en ${cityData.name}<span class="cost">-$120</span></button>`;
+
+  if (isLast && cluesFoundHere >= 1) {
+    html += `<button class="action-btn arrest-btn highlight" onclick="goArrest()">📋 Emitir orden de arresto (seguro)</button>`;
+    html += `<button class="action-btn direct-btn" onclick="openDirectArrest()">⚡ Confrontación directa (+50% bonus, mayor riesgo)</button>`;
+  } else if (!isLast && cluesFoundHere >= 1) {
+    html += `<button class="action-btn travel-btn" onclick="openTravel()">✈ Seguir el rastro — viajar</button>`;
+  }
+
+  panel.innerHTML = html;
+  panel.setAttribute('data-lbl', isLast ? 'ACCIONES — CIERRE DE CASO' : 'ACCIONES DISPONIBLES');
+}
+
+function getClue(cityIdx, clueIdx, cost) {
+  if (G.cash < cost) { addLog('Fondos insuficientes.','bad'); return; }
+  const key = `${cityIdx}-${clueIdx}`;
+  if (G.cluesFound.includes(key)) return;
+  G.cash -= cost;
+  G.cluesFound.push(key);
+  const cl = G.currentCase.cities[cityIdx].clues[clueIdx];
+  addLog(`Pista: [${cl.type}]`, 'good');
+  if (cost > 0) addLog(`Gasto: -$${cost}`, 'bad');
+  saveState();
+  renderInvestigation();
+  updateHUD();
+}
+
+function payHotel(cost) {
+  if (G.cash < cost) { addLog('Sin fondos para el hotel.','bad'); return; }
+  G.cash -= cost;
+  addLog(`Hotel: -$${cost}`, 'bad');
+  saveState();
+  updateHUD();
+  renderInvestigation();
+}
+
+function renderClues() {
+  const c = G.currentCase;
+  let html = '', count = 0;
+  c.cities.forEach((cd,ci) => {
+    cd.clues.forEach((cl,i) => {
+      if (G.cluesFound.includes(`${ci}-${i}`)) {
+        html += `<div class="clue-entry"><span class="clue-type">${cl.type} · ${cd.name}</span>${cl.text}</div>`;
+        count++;
+      }
+    });
+  });
+  const panel = document.getElementById('clues-panel');
+  panel.innerHTML = count > 0 ? html : '<div class="no-clues">Sin pistas aún.</div>';
+  panel.setAttribute('data-lbl', `PISTAS (${count})`);
+}
+
+// ═══════════════════════════════════════
+//  TRAVEL + INDIANA JONES MAP
+// ═══════════════════════════════════════
+
+function openTravel() {
+  const c = G.currentCase;
+  const nextIdx = G.currentCityIdx + 1;
+  const destinations = c.cities.slice(nextIdx).map((cd,i) => ({
+    name: cd.name, index: nextIdx+i, cost: CITIES[cd.name]?.cost||500
+  }));
+  document.getElementById('flight-list').innerHTML = destinations.map(d =>
+    `<div class="flight-opt" onclick="travel(${d.index},${d.cost})">
+      <span class="flight-city">✈ ${d.name}</span>
+      <span class="flight-price">-$${d.cost.toLocaleString('es')}</span>
+    </div>`
+  ).join('');
+  document.getElementById('travel-modal').classList.add('open');
+}
+
+function travel(idx, cost) {
+  if (G.cash < cost) { addLog('Sin fondos para el vuelo.','bad'); closeModal(); return; }
+  const fromCity = G.currentCase.cities[G.currentCityIdx].name;
+  const toCity = G.currentCase.cities[idx].name;
+  G.cash -= cost;
+  closeModal();
+  // Show map THEN update state
+  showMap(fromCity, toCity, () => {
+    G.currentCityIdx = idx;
+    if (!G.visitedCities.includes(toCity)) G.visitedCities.push(toCity);
+    addLog(`Vuelo a ${toCity}: -$${cost}`, 'bad');
+    saveState();
+    renderInvestigation();
+    updateHUD();
+  });
+}
+
+function closeModal() { document.getElementById('travel-modal').classList.remove('open'); }
+
+// ── INDIANA JONES MAP ──
+function showMap(fromCity, toCity, onClose) {
+  const overlay = document.getElementById('map-overlay');
+  const wrap = document.getElementById('map-svg-wrap');
+  const caption = document.getElementById('map-caption');
+  const closeBtn = document.getElementById('map-close-btn');
+  const title = document.getElementById('map-title');
+
+  const from = CITIES[fromCity] || {x:50,y:50};
+  const to = CITIES[toCity] || {x:60,y:40};
+
+  title.textContent = `— ${fromCity.toUpperCase()} → ${toCity.toUpperCase()} —`;
+  caption.textContent = '';
+  closeBtn.style.display = 'none';
+
+  // Build simplified world map SVG
+  const W = 700, H = 380;
+  const fx = (from.x/100)*W, fy = (from.y/100)*H;
+  const tx = (to.x/100)*W, ty = (to.y/100)*H;
+
+  // Control point for curved path
+  const mx = (fx+tx)/2, my = Math.min(fy,ty) - 60;
+  const pathD = `M${fx},${fy} Q${mx},${my} ${tx},${ty}`;
+
+  // Rough path length estimate for animation
+  const dx=tx-fx, dy=ty-fy;
+  const pathLen = Math.sqrt(dx*dx+dy*dy)*1.3;
+
+  // Build city dots for all known cities
+  const allDots = Object.entries(CITIES).map(([name, cd]) => {
+    const cx = (cd.x/100)*W, cy = (cd.y/100)*H;
+    const isFrom = name===fromCity, isTo = name===toCity;
+    const visited = G.visitedCities.includes(name);
+    return `<circle cx="${cx}" cy="${cy}" r="${isFrom||isTo?5:3}" fill="${isFrom?'#ffb000':isTo?'#cc3300':visited?'#5a3e10':'#2a1f08'}" stroke="${isFrom||isTo?'#ffd700':'#3a2a10'}" stroke-width="${isFrom||isTo?1.5:1}" opacity="${visited||isFrom||isTo?1:0.4}"/>
+    <text x="${cx}" y="${cy-8}" fill="${isFrom||isTo?'#ffd700':'#5a3e10'}" font-size="${isFrom||isTo?9:7}" font-family="Special Elite, cursive" text-anchor="middle" opacity="${isFrom||isTo?1:visited?0.6:0.3}">${name}</text>`;
+  }).join('');
+
+  wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+    <defs>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="2" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- Aged paper texture lines -->
+    ${Array.from({length:12},(_,i)=>`<line x1="0" y1="${i*32}" x2="${W}" y2="${i*32}" stroke="#2a1f08" stroke-width="0.5" opacity="0.4"/>`).join('')}
+    ${Array.from({length:16},(_,i)=>`<line x1="${i*46}" y1="0" x2="${i*46}" y2="${H}" stroke="#2a1f08" stroke-width="0.5" opacity="0.3"/>`).join('')}
+
+    <!-- Simplified continent blobs -->
+    <!-- North America -->
+    <path d="M60,80 L140,70 L160,120 L150,180 L120,220 L80,240 L50,200 L40,160 L50,110 Z" fill="#1e1508" stroke="#2e2010" stroke-width="1" opacity="0.8"/>
+    <!-- South America -->
+    <path d="M130,260 L180,250 L200,300 L190,360 L150,370 L120,340 L110,290 Z" fill="#1e1508" stroke="#2e2010" stroke-width="1" opacity="0.8"/>
+    <!-- Europe -->
+    <path d="M340,60 L420,55 L440,90 L430,120 L390,130 L350,110 L330,85 Z" fill="#1e1508" stroke="#2e2010" stroke-width="1" opacity="0.8"/>
+    <!-- Africa -->
+    <path d="M350,130 L430,120 L450,200 L440,300 L400,350 L360,340 L330,270 L320,190 L330,145 Z" fill="#1e1508" stroke="#2e2010" stroke-width="1" opacity="0.8"/>
+    <!-- Asia -->
+    <path d="M430,50 L600,40 L650,90 L640,160 L580,200 L520,210 L460,190 L420,140 L420,80 Z" fill="#1e1508" stroke="#2e2010" stroke-width="1" opacity="0.8"/>
+    <!-- Australia -->
+    <path d="M560,270 L640,260 L660,310 L630,340 L570,340 L545,305 Z" fill="#1e1508" stroke="#2e2010" stroke-width="1" opacity="0.8"/>
+
+    <!-- City dots -->
+    ${allDots}
+
+    <!-- Route path (dashed red, animated) -->
+    <path d="${pathD}" fill="none" stroke="#cc3300" stroke-width="2" stroke-dasharray="6 4"
+      stroke-dashoffset="${pathLen}"
+      style="animation: mapLine 2s ease forwards; --len:${pathLen};"
+      filter="url(#glow)" opacity="0.9"/>
+
+    <!-- Animated plane emoji along path -->
+    <text font-size="16" text-anchor="middle" style="animation: planeFly 2.5s ease forwards;">
+      <animateMotion dur="2.2s" fill="freeze" path="${pathD}"/>
+      ✈
+    </text>
+
+    <!-- Origin marker -->
+    <circle cx="${fx}" cy="${fy}" r="7" fill="none" stroke="#ffb000" stroke-width="1.5" opacity="0.6"/>
+
+    <!-- Destination pulse -->
+    <circle cx="${tx}" cy="${ty}" r="8" fill="none" stroke="#cc3300" stroke-width="1.5">
+      <animate attributeName="r" values="5;12;5" dur="1.5s" repeatCount="indefinite" begin="2s"/>
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" begin="2s"/>
+    </circle>
+  </svg>`;
+
+  overlay.classList.add('open');
+
+  // Show caption + close button after animation
+  setTimeout(() => {
+    caption.textContent = `${fromCity} → ${toCity}`;
+    closeBtn.style.display = 'block';
+    closeBtn.onclick = () => {
+      overlay.classList.remove('open');
+      if (onClose) onClose();
+    };
+  }, 2400);
+}
+
+function closeMap() {
+  document.getElementById('map-overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════
+//  ARREST (FORMAL)
+// ═══════════════════════════════════════
+
+function goArrest() {
+  const c = G.currentCase;
+  const allSuspects = buildSuspectList(c);
+  document.getElementById('arrest-grid').innerHTML = allSuspects.map(s =>
+    `<div class="mugshot" id="mg-${s.id}" onclick="selectSuspect('${s.id}')">
+      <span class="mg-icon">${s.emoji}</span>
+      <div class="mg-name">${s.name}</div>
+      <div class="mg-info">${s.alias}<br>${(s.desc||'').substring(0,90)}...</div>
+    </div>`
+  ).join('');
+  selectedSuspect = null;
+  document.getElementById('arrest-confirm').disabled = true;
+  document.getElementById('hud-cash-arr').textContent = '$'+G.cash.toLocaleString('es');
+  showScreen('screen-arrest');
+}
+
+function buildSuspectList(c) {
+  const villain = c.villain;
+  const decoys = c.decoys || [];
+  return [{id:'villain',name:villain.name,alias:villain.alias,emoji:villain.emoji,desc:villain.backstory},
+    ...decoys.map((d,i)=>({id:`decoy${i}`,name:d.name,alias:d.alias,emoji:d.emoji,desc:d.description}))
+  ].sort(()=>Math.random()-.5);
+}
+
+function selectSuspect(id) {
+  selectedSuspect = id;
+  document.querySelectorAll('#arrest-grid .mugshot').forEach(m=>m.classList.remove('selected'));
+  document.getElementById('mg-'+id).classList.add('selected');
+  document.getElementById('arrest-confirm').disabled = false;
+}
+
+function confirmArrest() {
+  if (!selectedSuspect) return;
+  showResult(selectedSuspect === 'villain', false);
+}
+
+// ═══════════════════════════════════════
+//  DIRECT ARREST
+// ═══════════════════════════════════════
+
+function openDirectArrest() {
+  const c = G.currentCase;
+  const allSuspects = buildSuspectList(c);
+  document.getElementById('direct-grid').innerHTML = allSuspects.map(s =>
+    `<div class="mugshot" id="dm-${s.id}" onclick="selectDirect('${s.id}')">
+      <span class="mg-icon">${s.emoji}</span>
+      <div class="mg-name">${s.name}</div>
+      <div class="mg-info">${s.alias}</div>
+    </div>`
+  ).join('');
+  selectedDirect = null;
+  document.getElementById('direct-confirm').disabled = true;
+  document.getElementById('direct-modal').classList.add('open');
+}
+
+function selectDirect(id) {
+  selectedDirect = id;
+  document.querySelectorAll('#direct-grid .mugshot').forEach(m=>m.classList.remove('selected'));
+  document.getElementById('dm-'+id).classList.add('selected');
+  document.getElementById('direct-confirm').disabled = false;
+}
+
+function confirmDirect() {
+  if (!selectedDirect) return;
+  document.getElementById('direct-modal').classList.remove('open');
+  showResult(selectedDirect === 'villain', true);
+}
+
+function closeDirect() { document.getElementById('direct-modal').classList.remove('open'); }
+
+// ═══════════════════════════════════════
+//  RESULT + ANIMATIONS
+// ═══════════════════════════════════════
+
+function showResult(correct, isDirect) {
+  const c = G.currentCase;
+  const villain = c.villain;
+  const baseReward = Number(c.reward);
+  const basePoints = Number(c.points || 200);
+  const bonus = isDirect && correct ? 1.5 : 1;
+  const earnedCash = correct ? Math.round(baseReward * bonus) : 0;
+  const earnedPoints = correct ? Math.round(basePoints * bonus * (isDirect ? 1 : 1)) : 0;
+
+  if (correct) {
+    G.cash += earnedCash;
+    G.points += earnedPoints;
+    G.solved++;
+    G.caseHistory.unshift({title:c.title, result:'RESUELTO', reward:earnedCash, points:earnedPoints, org:c.org, direct:isDirect});
+  } else {
+    if (isDirect) { G.cash = Math.max(0, G.cash-500); addLog('Confrontación fallida. -$500', 'bad'); }
+    G.failed++;
+    G.caseHistory.unshift({title:c.title, result:'FALLIDO', reward:0, points:0, org:c.org});
+  }
+
+  const prevRank = getRank();
+  G.currentCase = null;
+  document.getElementById('active-obj').style.display = 'none';
+
+  const newRank = getRank();
+  const rankUp = correct && newRank.name !== prevRank.name;
+
+  saveState();
+
+  // Show summary map before result
+  const lastCity = c.finalCity || c.cities[c.cities.length-1].name;
+  showMap(c.cities[0].name, lastCity, () => {
+    buildResultScreen(correct, isDirect, earnedCash, earnedPoints, villain, c, rankUp, newRank);
+  });
+}
+
+function buildResultScreen(correct, isDirect, earnedCash, earnedPoints, villain, c, rankUp, newRank) {
+  let html = '';
+  if (correct) {
+    html = `
+      <div class="payment-scene">
+        <div class="stamp">PAGADO</div>
+        <div class="pay-title">RECIBO DE HONORARIOS</div>
+        <div class="pay-body">
+          Cliente: ${c.client}<br>
+          Caso: ${c.title}<br>
+          Sospechoso detenido: ${villain.name} — ${villain.alias}<br>
+          ${isDirect ? '<em>Confrontación directa — bonus +50%</em><br>' : ''}
+          <br>
+          <em>"${villain.quote}"</em><br>
+          <small>— ${villain.name}, en el momento del arresto</small>
+        </div>
+        <div class="pay-amount">$${earnedCash.toLocaleString('es')}</div>
+      </div>
+      <div class="pts-burst">+${earnedPoints.toLocaleString('es')} pts ⭐</div>
+      ${rankUp ? `<div style="background:var(--bg2);border:1px solid var(--gold);padding:12px 20px;margin:0 auto 16px;display:inline-block;text-align:center;animation:fadeIn .5s ease .3s both;">
+        <div style="font-size:1.6rem;">${newRank.icon}</div>
+        <div style="font-family:'Special Elite',cursive;color:var(--gold);font-size:1.1rem;margin-top:4px;">¡NUEVO RANGO!</div>
+        <div style="font-family:'Special Elite',cursive;color:var(--amber);font-size:0.9rem;">${newRank.name.toUpperCase()}</div>
+        <div style="font-size:0.65rem;color:var(--amber-dim);margin-top:4px;">${newRank.desc}</div>
+      </div>` : ''}
+      <div class="result-stats">
+        FONDOS: <span style="color:var(--amber)">$${G.cash.toLocaleString('es')}</span><br>
+        PUNTOS TOTALES: <span style="color:var(--gold)">⭐ ${G.points.toLocaleString('es')}</span><br>
+        CASOS RESUELTOS: <span style="color:var(--amber)">${G.solved}</span><br>
+        ${c.org ? '<span style="color:var(--red)">FICHA M.A.L.O.S. ACTUALIZADA</span>' : ''}
+      </div>
+      <button class="btn-main" onclick="postCase()">[ SIGUIENTE CASO ]</button>`;
+    // Trigger cash rain
+    setTimeout(() => triggerCashRain(), 300);
+  } else {
+    const isDirStr = isDirect ? 'La confrontación salió mal. Escapó antes de que llegara nadie.' : 'Arresto fallido. El culpable desapareció mientras procesaban al inocente.';
+    html = `
+      <div class="result-title lose">CASO FALLIDO</div>
+      <div class="result-body">
+        ${isDirStr}<br><br>
+        <span style="color:var(--amber)">${villain.name}</span> — ${villain.alias} — cruzó la frontera.<br>
+        ${c.org ? `<span style="color:var(--red)">M.A.L.O.S. sigue operando.</span>` : 'El objeto robado no fue recuperado.'}
+        ${isDirect ? `<br><span style="color:var(--red)">Multa por confrontación sin pruebas: -$500</span>` : ''}
+      </div>
+      <div class="result-stats">
+        HONORARIO: <span style="color:var(--red)">$0 — FALLIDO</span><br>
+        FONDOS: <span style="color:var(--amber)">$${G.cash.toLocaleString('es')}</span><br>
+        PUNTOS: <span style="color:var(--gold)">⭐ ${G.points.toLocaleString('es')}</span>
+      </div>
+      <button class="btn-main" onclick="postCase()">[ VOLVER A LA OFICINA ]</button>`;
+  }
+
+  document.getElementById('result-content').innerHTML = `
+    <div class="result-title ${correct?'win':'lose'}">${correct?(isDirect?'⚡ CONFRONTACIÓN EXITOSA':'CASO CERRADO'):'CASO FALLIDO'}</div>
+    ${html}`;
+  showScreen('screen-result');
+}
+
+function triggerCashRain() {
+  const wrap = document.getElementById('cash-anim-wrap');
+  const bills = ['💵','💴','💶','💷','💸'];
+  wrap.innerHTML = '';
+  for (let i = 0; i < 18; i++) {
+    const bill = document.createElement('div');
+    bill.className = 'cash-bill';
+    bill.textContent = bills[Math.floor(Math.random()*bills.length)];
+    bill.style.left = (Math.random()*95) + '%';
+    bill.style.top = '-40px';
+    bill.style.animationDelay = (Math.random()*1.2) + 's';
+    bill.style.animationDuration = (1.5 + Math.random()*1) + 's';
+    wrap.appendChild(bill);
+  }
+  setTimeout(() => { wrap.innerHTML = ''; }, 3500);
+}
+
+async function postCase() {
+  showScreen('screen-office');
+  updateHUD();
+  if (pendingCases.length < 3) {
+    generateCase().then(c => pendingCases.push(c)).catch(()=>{});
+  }
+}
+
+// ═══════════════════════════════════════
+//  TECH SHOP
+// ═══════════════════════════════════════
+
+function renderTechScreen() {
+  document.getElementById('tech-list').innerHTML = TECH_CATALOG.map(t => {
+    const owned = G.tech.includes(t.id);
+    return `<div class="tech-item ${owned?'owned':''}">
+      <div style="flex:1">
+        <div class="tech-name">${t.name}</div>
+        <div class="tech-desc">${t.desc}</div>
+        <div class="tech-desc" style="color:#335500;margin-top:3px;">${t.price===0?'▶ Siempre disponible':owned?'▶ En tu arsenal':G.cash>=t.price?'Disponible':'Fondos insuficientes'}</div>
+        ${!owned&&t.price>0?`<button class="btn-buy" onclick="buyTech('${t.id}')" ${G.cash<t.price?'disabled':''}>ADQUIRIR</button>`:''}
+      </div>
+      <div class="tech-price">${owned?'✓':'$'+t.price.toLocaleString('es')}</div>
+    </div>`;
+  }).join('');
+}
+
+function buyTech(id) {
+  const t = TECH_CATALOG.find(x=>x.id===id);
+  if (!t||G.tech.includes(id)) return;
+  if (G.cash<t.price) { addLog('Fondos insuficientes.','bad'); return; }
+  G.cash -= t.price;
+  G.tech.push(id);
+  addLog(`Equipamiento: ${t.name}`, 'good');
+  saveState();
+  renderTechScreen();
+  updateHUD();
+}
+
+// ═══════════════════════════════════════
+//  DOSSIERS
+// ═══════════════════════════════════════
+
+function renderDossiers() {
+  const el = document.getElementById('dossier-content');
+  if (G.malosMembers.length === 0) {
+    el.innerHTML = `<div class="panel panel-text" data-lbl="M.A.L.O.S." style="margin-bottom:0">
+      <span class="org">M.A.L.O.S.</span> — Movimiento de Apropiación y Logística de Objetos Sustraídos.<br><br>
+      Archivo vacío. Todavía no has tenido casos relacionados. Los casos marcados con ● M.A.L.O.S. irán llenando este expediente.</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="panel panel-text" data-lbl="ORGANIZACIÓN" style="margin-bottom:14px;">
+    <span class="org">M.A.L.O.S.</span> · ${G.malosEncounters} operaciones · ${G.malosMembers.length} miembros identificados
+  </div>
+  ${G.caseHistory.filter(c=>c.org).map(c=>`
+    <div class="dossier">
+      <div class="dossier-stamp" style="color:${c.result==='RESUELTO'?'var(--green)':'var(--red)'};border-color:${c.result==='RESUELTO'?'var(--green)':'var(--red)'};">${c.result}</div>
+      <div class="dos-name">${c.title}</div>
+      <div class="dos-alias">Operación M.A.L.O.S.</div>
+      <div class="dos-body">Honorario: ${c.result==='RESUELTO'?'$'+Number(c.reward).toLocaleString('es'):'No cobrado'} · Puntos: ⭐${Number(c.points||0).toLocaleString('es')}</div>
+    </div>`).join('')}`;
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+
+function initOffice() {
+  document.getElementById('office-sub').textContent = `INVESTIGACIÓN PRIVADA · ${G.name.toUpperCase()}`;
+  showScreen('screen-office');
+  addLog('Sistema iniciado. Bienvenido, ' + G.name + '.', 'imp');
+}
+
+(function boot() {
+  if (G.apiKey) initOffice();
+  else showScreen('screen-setup');
+  setStatus('RASTROS v3.0 — SISTEMA LISTO');
+})();
+</script>
+</body>
+</html>
